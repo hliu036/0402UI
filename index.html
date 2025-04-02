@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>倾诉 - 你的心灵伙伴</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#7C3AED',
+                        secondary: '#EC4899',
+                        accent: '#F59E0B'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        /* 添加录音动画效果 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        .animate-pulse {
+            animation: pulse 1s infinite;
+        }
+        /* 添加裁剪相关样式 */
+        .cropper-view-box,
+        .cropper-face {
+            border-radius: 50%;
+        }
+        /* 添加通话界面过渡动画 */
+        #voice-call {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        #voice-call.opacity-0 {
+            opacity: 0;
+        }
+        
+        /* 通话按钮动画 */
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1);
+                opacity: 0.3;
+            }
+            100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+        }
+        
+        .animate-pulse-ring {
+            animation: pulse-ring 1.5s infinite;
+        }
+
+        /* 通话质量指示器动画 */
+        @keyframes sound-wave {
+            0% { height: 4px; }
+            50% { height: 32px; }
+            100% { height: 4px; }
+        }
+
+        .sound-wave div {
+            animation: sound-wave 1s ease infinite;
+            animation-delay: calc(0.2s * var(--i));
+        }
+
+        /* 录音动画 */
+        @keyframes recording-pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .recording-pulse {
+            animation: recording-pulse 1.5s infinite;
+        }
+
+        /* 录音进度条动画 */
+        @keyframes progress {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+
+        .recording-progress {
+            animation: progress 60s linear;
+        }
+
+        /* 添加页面过渡动画 */
+        #chat, #voice-call {
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        /* 提示消息动画 */
+        @keyframes toast-fade {
+            0% { opacity: 0; transform: translate(-50%, -40%); }
+            20% { opacity: 1; transform: translate(-50%, -50%); }
+            80% { opacity: 1; transform: translate(-50%, -50%); }
+            100% { opacity: 0; transform: translate(-50%, -60%); }
+        }
+
+        .toast-animation {
+            animation: toast-fade 2s ease-in-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="fixed top-0 w-full bg-white shadow-md z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold text-primary">倾诉</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="text-gray-600 hover:text-primary">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <button class="text-gray-600 hover:text-primary">
+                        <i class="fas fa-user"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <main class="pt-16">
+        <!-- 登录页面 -->
+        <section id="login" class="section active min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
+            <div class="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold text-gray-900">欢迎回来</h2>
+                    <p class="mt-2 text-gray-600">登录你的账号开始倾诉之旅</p>
+                </div>
+                <form class="mt-8 space-y-6" id="loginForm">
+                    <div class="rounded-md shadow-sm space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">手机号</label>
+                            <div class="flex">
+                                <span class="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                                    +86
+                                </span>
+                                <input type="tel" required pattern="[0-9]{11}" class="appearance-none rounded-none rounded-r-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary" placeholder="请输入手机号">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">验证码</label>
+                            <div class="flex space-x-2">
+                                <input type="text" required pattern="[0-9]{6}" class="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-primary focus:border-primary" placeholder="请输入验证码">
+                                <button type="button" id="sendCodeBtn" class="whitespace-nowrap px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                                    获取验证码
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input id="privacy-checkbox" type="checkbox" required class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                        <label for="privacy-checkbox" class="ml-2 block text-sm text-gray-900">
+                            我已阅读并同意
+                            <a href="#" class="font-medium text-primary hover:text-purple-700">《用户协议》</a>
+                            和
+                            <a href="#" class="font-medium text-primary hover:text-purple-700">《隐私政策》</a>
+                        </label>
+                    </div>
+
+                    <div>
+                        <button type="submit" class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                            登录
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- 心理评测页面 -->
+        <section id="assessment" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-bold text-center text-gray-900 mb-8">心理评测</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-4">抑郁测试 (PHQ-9)</h3>
+                        <p class="text-gray-600 mb-4">通过9个问题评估你的抑郁程度</p>
+                        <button onclick="showSection('phq9-test')" class="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+                            开始测试
+                        </button>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-4">焦虑测试 (GAD-7)</h3>
+                        <p class="text-gray-600 mb-4">通过7个问题评估你的焦虑程度</p>
+                        <button onclick="showSection('gad7-test')" class="w-full bg-primary text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+                            开始测试
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PHQ-9 抑郁测试页面 -->
+        <section id="phq9-test" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center mb-8">
+                    <button onclick="showSection('assessment')" class="mr-4 text-gray-600 hover:text-primary">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-3xl font-bold text-gray-900">抑郁测试 (PHQ-9)</h2>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <p class="text-gray-600 mb-6">在过去的两周内，您是否经常受到以下问题的困扰？</p>
+                    <form id="phq9Form" class="space-y-6">
+                        <div class="space-y-4">
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <p class="font-medium text-gray-900 mb-4">1. 做事时提不起劲或没有兴趣</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center">
+                                        <input type="radio" name="q1" value="0" class="h-4 w-4 text-primary" required>
+                                        <span class="ml-2 text-gray-700">完全没有</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="q1" value="1" class="h-4 w-4 text-primary">
+                                        <span class="ml-2 text-gray-700">有几天</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="q1" value="2" class="h-4 w-4 text-primary">
+                                        <span class="ml-2 text-gray-700">一半以上时间</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="q1" value="3" class="h-4 w-4 text-primary">
+                                        <span class="ml-2 text-gray-700">几乎每天</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <!-- 其他PHQ-9问题 -->
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <p class="font-medium text-gray-900 mb-4">2. 感到心情低落、沮丧或绝望</p>
+                                <div class="space-y-2">
+                                    <!-- 同样的选项结构 -->
+                                </div>
+                            </div>
+                            <!-- 更多问题... -->
+                        </div>
+                        <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                            提交测试
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- GAD-7 焦虑测试页面 -->
+        <section id="gad7-test" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center mb-8">
+                    <button onclick="showSection('assessment')" class="mr-4 text-gray-600 hover:text-primary">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-3xl font-bold text-gray-900">焦虑测试 (GAD-7)</h2>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <p class="text-gray-600 mb-6">在过去的两周内，您是否经常受到以下问题的困扰？</p>
+                    <form id="gad7Form" class="space-y-6">
+                        <div class="space-y-4">
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <p class="font-medium text-gray-900 mb-4">1. 感到紧张、焦虑或心烦意乱</p>
+                                <div class="space-y-2">
+                                    <label class="flex items-center">
+                                        <input type="radio" name="q1" value="0" class="h-4 w-4 text-primary" required>
+                                        <span class="ml-2 text-gray-700">完全没有</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="q1" value="1" class="h-4 w-4 text-primary">
+                                        <span class="ml-2 text-gray-700">有几天</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="q1" value="2" class="h-4 w-4 text-primary">
+                                        <span class="ml-2 text-gray-700">一半以上时间</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="q1" value="3" class="h-4 w-4 text-primary">
+                                        <span class="ml-2 text-gray-700">几乎每天</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <!-- 其他GAD-7问题 -->
+                            <div class="p-4 bg-gray-50 rounded-lg">
+                                <p class="font-medium text-gray-900 mb-4">2. 无法停止或控制担忧</p>
+                                <div class="space-y-2">
+                                    <!-- 同样的选项结构 -->
+                                </div>
+                            </div>
+                            <!-- 更多问题... -->
+                        </div>
+                        <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                            提交测试
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- 测试结果页面 -->
+        <section id="test-result" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center" id="resultIcon">
+                        <!-- 图标将通过JavaScript动态添加 -->
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4" id="resultTitle">测试结果</h2>
+                    <p class="text-gray-600 mb-6" id="resultDescription"></p>
+                    <div class="mb-8 p-4 bg-gray-50 rounded-lg">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">得分：<span id="resultScore"></span></h3>
+                        <p class="text-gray-600" id="resultLevel"></p>
+                    </div>
+                    <div class="space-y-4">
+                        <button onclick="showSection('chat')" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                            开始倾诉
+                        </button>
+                        <button onclick="showSection('assessment')" class="w-full bg-gray-100 text-gray-700 py-3 rounded-lg hover:bg-gray-200 transition-colors">
+                            返回测试列表
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 倾诉页面 -->
+        <section id="chat" class="section min-h-screen bg-gray-50 py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <!-- 顶部导航 -->
+                    <div class="p-4 border-b flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" class="w-12 h-12 rounded-full" alt="AI头像">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">AI倾听者</h3>
+                                <p class="text-sm text-gray-500">在线</p>
+                            </div>
+                        </div>
+                        <!-- 通话按钮 -->
+                        <button onclick="startCall()" class="p-2 text-gray-600 hover:text-primary focus:outline-none">
+                            <i class="fas fa-phone text-xl"></i>
+                        </button>
+                    </div>
+
+                    <!-- 聊天内容区域 -->
+                    <div class="h-[500px] overflow-y-auto p-4 space-y-4" id="chatMessages">
+                        <div class="flex items-start space-x-3">
+                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" class="w-8 h-8 rounded-full" alt="AI头像">
+                            <div class="bg-gray-100 rounded-lg p-3">
+                                <p class="text-gray-800">你好，我是你的AI倾听者。在这里，你可以尽情倾诉，我会认真倾听，不会评判。</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 输入区域 -->
+                    <div class="p-4 border-t">
+                        <!-- 语音录制状态提示 -->
+                        <div id="voiceRecordingStatus" class="hidden mb-4 p-3 bg-gray-50 rounded-lg text-center">
+                            <p class="text-gray-600">
+                                <span class="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse mr-2"></span>
+                                正在录音... <span id="recordingTime">0:00</span>
+                            </p>
+                            <p class="text-sm text-gray-500 mt-1">上滑取消</p>
+                        </div>
+
+                        <!-- 输入工具栏 -->
+                        <div class="flex items-center space-x-2">
+                            <!-- 输入模式切换按钮 -->
+                            <button id="switchInputMode" class="p-2 text-gray-500 hover:text-primary focus:outline-none" onclick="toggleInputMode()">
+                                <i class="fas fa-keyboard text-xl"></i>
+                            </button>
+
+                            <!-- 文字输入区域 -->
+                            <div id="textInputArea" class="flex-1 flex items-center space-x-2">
+                                <input type="text" id="messageInput" placeholder="输入你想说的话..." class="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary">
+                                <button onclick="sendMessage()" class="bg-primary text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                                    发送
+                                </button>
+                            </div>
+
+                            <!-- 语音输入按钮 -->
+                            <div id="voiceInputArea" class="flex-1 hidden">
+                                <button id="voiceRecordBtn" class="w-full bg-gray-100 text-gray-600 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-center">
+                                    按住 说话
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 通话页面 -->
+        <section id="voice-call" class="page fixed inset-0 bg-gradient-to-b from-purple-900 to-purple-700 z-50">
+            <!-- 顶部状态栏 -->
+            <div class="absolute top-0 left-0 right-0 p-4">
+                <div class="flex justify-between items-center text-white">
+                    <button onclick="minimizeCall()" class="p-2">
+                        <i class="fas fa-chevron-down text-xl"></i>
+                    </button>
+                    <span class="text-sm" id="networkStatus">网络良好</span>
+                </div>
+            </div>
+
+            <!-- 主要内容区域 -->
+            <div class="h-full flex flex-col items-center justify-center px-6 text-white">
+                <!-- 头像和状态 -->
+                <div class="text-center mb-12">
+                    <div class="relative inline-block">
+                        <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" 
+                             class="w-32 h-32 rounded-full border-4 border-white/30 mb-4" 
+                             alt="AI头像">
+                        <div class="absolute bottom-4 right-0 w-6 h-6 bg-green-400 rounded-full border-4 border-purple-900"></div>
+                    </div>
+                    <h3 class="text-2xl font-semibold mb-2">AI倾听者</h3>
+                    <p id="callStatus" class="text-lg opacity-80">正在接通...</p>
+                    <div id="callTimer" class="text-3xl font-medium mt-4 opacity-0 transition-opacity duration-300">00:00</div>
+                </div>
+
+                <!-- 通话控制按钮 -->
+                <div class="grid grid-cols-3 gap-8 mb-16">
+                    <button onclick="toggleMute()" class="flex flex-col items-center space-y-2">
+                        <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
+                            <i id="muteIcon" class="fas fa-microphone text-2xl"></i>
+                        </div>
+                        <span class="text-sm opacity-80">麦克风</span>
+                    </button>
+                    
+                    <button onclick="endCall()" class="flex flex-col items-center space-y-2">
+                        <div class="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center animate-pulse">
+                            <i class="fas fa-phone-slash text-2xl"></i>
+                        </div>
+                        <span class="text-sm opacity-80">结束通话</span>
+                    </button>
+                    
+                    <button onclick="toggleSpeaker()" class="flex flex-col items-center space-y-2">
+                        <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
+                            <i id="speakerIcon" class="fas fa-volume-up text-2xl"></i>
+                        </div>
+                        <span class="text-sm opacity-80">扬声器</span>
+                    </button>
+                </div>
+
+                <!-- 通话质量指示器 -->
+                <div class="flex items-center space-x-1">
+                    <div class="w-1 h-4 bg-white/30 rounded-full"></div>
+                    <div class="w-1 h-6 bg-white/50 rounded-full"></div>
+                    <div class="w-1 h-8 bg-white rounded-full"></div>
+                    <div class="w-1 h-6 bg-white/50 rounded-full"></div>
+                    <div class="w-1 h-4 bg-white/30 rounded-full"></div>
+                </div>
+            </div>
+
+            <!-- 最小化通话悬浮窗 -->
+            <div id="minimized-call" class="fixed top-4 right-4 bg-purple-800 rounded-2xl shadow-lg hidden">
+                <div class="p-4 flex items-center space-x-4">
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" 
+                         class="w-12 h-12 rounded-full" alt="AI头像">
+                    <div>
+                        <p class="text-white font-medium">AI倾听者</p>
+                        <p class="text-white/70 text-sm" id="minimized-timer">00:00</p>
+                    </div>
+                    <button onclick="maximizeCall()" class="text-white/70 hover:text-white">
+                        <i class="fas fa-expand text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 创建数字人页面 -->
+        <section id="create-avatar" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-bold text-center text-gray-900 mb-8">创建你的数字人</h2>
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <form class="space-y-6" id="createAvatarForm">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">选择头像</label>
+                            <div class="mt-2 flex items-center space-x-4">
+                                <div class="relative group">
+                                    <img id="avatarPreview" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" class="w-24 h-24 rounded-full object-cover" alt="预览头像">
+                                    <div class="absolute inset-0 bg-black bg-opacity-40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <i class="fas fa-camera text-white text-xl"></i>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="showSection('avatar-select')" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                                    更换头像
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">关系</label>
+                            <input type="text" id="relationship" required class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="例如：妈妈、爸爸、朋友">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">称谓</label>
+                            <input type="text" id="nickname" required class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="例如：宝贝、亲爱的">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">上传声音样本</label>
+                            <div class="mt-2">
+                                <button type="button" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                                    录制声音
+                                </button>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                            创建数字人
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- 头像选择页面 -->
+        <section id="avatar-select" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center mb-8">
+                    <button onclick="showSection('create-avatar')" class="mr-4 text-gray-600 hover:text-primary">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-3xl font-bold text-gray-900">选择头像</h2>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <!-- 头像上传区域 -->
+                    <div class="mb-8">
+                        <div class="relative w-full h-40 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors" onclick="document.getElementById('avatarInput').click()">
+                            <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                            <p class="text-gray-600">点击或拖拽图片到此处</p>
+                            <p class="text-sm text-gray-500 mt-1">支持 JPG、PNG 格式</p>
+                            <input type="file" id="avatarInput" class="hidden" accept="image/*" onchange="handleAvatarSelect(event)">
+                        </div>
+                    </div>
+
+                    <!-- 预设头像选择 -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">推荐头像</h3>
+                        <div class="grid grid-cols-4 gap-4">
+                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb" class="w-full aspect-square rounded-lg object-cover cursor-pointer hover:ring-2 ring-primary" onclick="selectPresetAvatar(this.src)" alt="预设头像1">
+                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2" class="w-full aspect-square rounded-lg object-cover cursor-pointer hover:ring-2 ring-primary" onclick="selectPresetAvatar(this.src)" alt="预设头像2">
+                            <img src="https://images.unsplash.com/photo-1554151228-14d9def656e4" class="w-full aspect-square rounded-lg object-cover cursor-pointer hover:ring-2 ring-primary" onclick="selectPresetAvatar(this.src)" alt="预设头像3">
+                            <img src="https://images.unsplash.com/photo-1547425260-76bcadfb4f2c" class="w-full aspect-square rounded-lg object-cover cursor-pointer hover:ring-2 ring-primary" onclick="selectPresetAvatar(this.src)" alt="预设头像4">
+                        </div>
+                    </div>
+
+                    <!-- 图片裁剪预览区域 -->
+                    <div id="cropperContainer" class="hidden mt-8">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">调整头像</h3>
+                        <div class="relative w-full h-80 bg-gray-100 rounded-lg overflow-hidden">
+                            <img id="cropperImage" class="max-w-full">
+                        </div>
+                        <div class="flex justify-end space-x-4 mt-4">
+                            <button type="button" onclick="cancelCrop()" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                                取消
+                            </button>
+                            <button type="button" onclick="confirmCrop()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-purple-700 transition-colors">
+                                确定
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 创建成功页面 -->
+        <section id="create-success" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-check text-4xl text-green-500"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">创建成功！</h2>
+                    <p class="text-gray-600 mb-8">你的数字人已经创建完成，现在可以开始对话了。</p>
+                    <button onclick="showSection('chat')" class="bg-primary text-white px-8 py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                        开始对话
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 爱自己页面 -->
+        <section id="self-love" class="section min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-bold text-center text-gray-900 mb-8">爱自己</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-4">今日鼓励</h3>
+                        <p class="text-gray-600 italic">"不必形色匆匆，不必光芒四射"</p>
+                        <p class="text-sm text-gray-500 mt-2">3月31日</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-4">每日抽卡</h3>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="aspect-square bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+                                <i class="fas fa-question text-2xl text-gray-400"></i>
+                            </div>
+                            <div class="aspect-square bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+                                <i class="fas fa-question text-2xl text-gray-400"></i>
+                            </div>
+                            <div class="aspect-square bg-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+                                <i class="fas fa-question text-2xl text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 个人中心页面 -->
+        <section id="profile" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="p-6 border-b">
+                        <div class="flex items-center space-x-4">
+                            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" class="w-20 h-20 rounded-full" alt="用户头像">
+                            <div>
+                                <h3 class="text-xl font-semibold text-gray-900">用户名</h3>
+                                <p class="text-gray-500">ID: 123456</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div>
+                                <h4 class="font-medium text-gray-900">会员状态</h4>
+                                <p class="text-sm text-gray-500">普通用户</p>
+                            </div>
+                            <button onclick="showSection('vip-subscription')" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                                开通会员
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div>
+                                <h4 class="font-medium text-gray-900">金币余额</h4>
+                                <p class="text-sm text-gray-500">1000</p>
+                            </div>
+                            <button onclick="showSection('payment')" class="bg-accent text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors">
+                                充值
+                            </button>
+                        </div>
+                        <div class="space-y-2">
+                            <button onclick="showSection('settings')" class="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-cog mr-2"></i>设置
+                            </button>
+                            <button onclick="showSection('privacy-policy')" class="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-shield-alt mr-2"></i>隐私协议
+                            </button>
+                            <button onclick="showSection('feedback')" class="w-full text-left p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                <i class="fas fa-comment-alt mr-2"></i>意见反馈
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 开通会员页面 -->
+        <section id="vip-subscription" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center mb-8">
+                    <button onclick="showSection('profile')" class="mr-4 text-gray-600 hover:text-primary">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-3xl font-bold text-gray-900">开通会员</h2>
+                </div>
+                <div class="space-y-8">
+                    <!-- 会员权益展示 -->
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-6">会员特权</h3>
+                        <div class="space-y-6">
+                            <div class="flex items-start space-x-4">
+                                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-robot text-primary"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-lg font-medium text-gray-900">无限次AI对话</h4>
+                                    <p class="text-gray-600">享受无限次的AI心理咨询服务，随时倾诉</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4">
+                                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-user-plus text-primary"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-lg font-medium text-gray-900">自定义数字人</h4>
+                                    <p class="text-gray-600">可创建多个专属数字人，打造专属倾诉对象</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4">
+                                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-chart-line text-primary"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-lg font-medium text-gray-900">专业心理报告</h4>
+                                    <p class="text-gray-600">获取详细的心理评估报告和改善建议</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 会员套餐选择 -->
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-6">选择套餐</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="border-2 border-primary rounded-lg p-4 text-center hover:bg-primary/5 cursor-pointer">
+                                <h4 class="text-lg font-medium text-gray-900">月度会员</h4>
+                                <p class="text-3xl font-bold text-primary my-2">¥29.9</p>
+                                <p class="text-gray-600">每月</p>
+                            </div>
+                            <div class="border-2 border-primary rounded-lg p-4 text-center bg-primary/5 cursor-pointer relative">
+                                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-white px-3 py-1 rounded-full text-sm">
+                                    推荐
+                                </div>
+                                <h4 class="text-lg font-medium text-gray-900">季度会员</h4>
+                                <p class="text-3xl font-bold text-primary my-2">¥79.9</p>
+                                <p class="text-gray-600">每季度</p>
+                            </div>
+                            <div class="border-2 border-primary rounded-lg p-4 text-center hover:bg-primary/5 cursor-pointer">
+                                <h4 class="text-lg font-medium text-gray-900">年度会员</h4>
+                                <p class="text-3xl font-bold text-primary my-2">¥299</p>
+                                <p class="text-gray-600">每年</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="showSection('payment')" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                        立即开通
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 支付方式选择页面 -->
+        <section id="payment" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center mb-8">
+                    <button onclick="showSection('profile')" class="mr-4 text-gray-600 hover:text-primary">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-3xl font-bold text-gray-900">选择支付方式</h2>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="space-y-4">
+                        <div class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="payment" id="alipay" class="h-4 w-4 text-primary">
+                            <label for="alipay" class="ml-3 flex items-center cursor-pointer">
+                                <i class="fab fa-alipay text-2xl text-blue-500 mr-2"></i>
+                                <span class="text-gray-900">支付宝支付</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input type="radio" name="payment" id="wechat" class="h-4 w-4 text-primary">
+                            <label for="wechat" class="ml-3 flex items-center cursor-pointer">
+                                <i class="fab fa-weixin text-2xl text-green-500 mr-2"></i>
+                                <span class="text-gray-900">微信支付</span>
+                            </label>
+                        </div>
+                    </div>
+                    <button class="w-full bg-primary text-white py-3 rounded-lg hover:bg-purple-700 transition-colors mt-6">
+                        确认支付
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 隐私协议页面 -->
+        <section id="privacy-policy" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center mb-8">
+                    <button onclick="showSection('profile')" class="mr-4 text-gray-600 hover:text-primary">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-3xl font-bold text-gray-900">隐私协议</h2>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="prose max-w-none">
+                        <h3>1. 信息收集</h3>
+                        <p>我们收集的信息包括但不限于：</p>
+                        <ul>
+                            <li>基本用户信息（如手机号码）</li>
+                            <li>心理测评数据</li>
+                            <li>对话内容</li>
+                        </ul>
+
+                        <h3>2. 信息使用</h3>
+                        <p>我们承诺：</p>
+                        <ul>
+                            <li>严格保护用户隐私</li>
+                            <li>不向第三方泄露个人信息</li>
+                            <li>仅用于改善服务质量</li>
+                        </ul>
+
+                        <h3>3. 信息安全</h3>
+                        <p>我们采用业界标准的安全技术保护您的个人信息。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 意见反馈页面 -->
+        <section id="feedback" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center mb-8">
+                    <button onclick="showSection('profile')" class="mr-4 text-gray-600 hover:text-primary">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h2 class="text-3xl font-bold text-gray-900">意见反馈</h2>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <form id="feedbackForm" class="space-y-6" onsubmit="showSection('feedback-success'); return false;">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">反馈内容</label>
+                            <textarea required rows="4" class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary" placeholder="请详细描述您的问题或建议..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">上传图片（选填）</label>
+                            <div class="grid grid-cols-3 gap-4 mb-4">
+                                <div class="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary">
+                                    <i class="fas fa-plus text-gray-400"></i>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-500">最多上传3张图片，每张不超过5MB</p>
+                        </div>
+                        <button type="submit" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                            提交反馈
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- 反馈提交成功页面 -->
+        <section id="feedback-success" class="section min-h-screen bg-white py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
+                        <i class="fas fa-check text-4xl text-green-500"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">提交成功</h2>
+                    <p class="text-gray-600 mb-8">谢谢您的反馈！我们会认真处理您的意见。</p>
+                    <div class="space-y-4">
+                        <button onclick="showSection('profile')" class="w-full bg-primary text-white py-3 rounded-lg hover:bg-purple-700 transition-colors">
+                            返回个人中心
+                        </button>
+                        <button onclick="showSection('feedback')" class="w-full bg-gray-100 text-gray-700 py-3 rounded-lg hover:bg-gray-200 transition-colors">
+                            继续反馈
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 录音文件选择页面 -->
+        <section id="voice-record" class="section min-h-screen bg-white">
+            <header class="bg-white shadow-sm">
+                <div class="px-4 py-3 flex items-center">
+                    <button onclick="showSection('create-avatar')" class="text-gray-600 mr-4">
+                        <i class="fas fa-arrow-left text-xl"></i>
+                    </button>
+                    <h1 class="text-xl font-bold text-gray-900">录制声音</h1>
+                </div>
+            </header>
+
+            <main class="p-4">
+                <!-- 录音说明 -->
+                <div class="bg-purple-50 rounded-xl p-4 mb-6">
+                    <h3 class="text-lg font-semibold text-purple-900 mb-2">录音说明</h3>
+                    <ul class="text-sm text-purple-700 space-y-2">
+                        <li>• 请在安静的环境下录音</li>
+                        <li>• 建议录制3-5句话，每句15-20秒</li>
+                        <li>• 语速保持正常，语气自然</li>
+                        <li>• 总时长建议在1-2分钟</li>
+                    </ul>
+                </div>
+
+                <!-- 录音列表 -->
+                <div class="space-y-4 mb-6" id="recordingsList">
+                    <!-- 录音项模板 -->
+                    <div class="hidden" id="recordingTemplate">
+                        <div class="bg-white rounded-xl shadow-sm p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                        <i class="fas fa-microphone text-purple-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900">录音 #<span class="recording-number">1</span></h4>
+                                        <p class="text-sm text-gray-500"><span class="recording-duration">0:00</span></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <button class="play-btn p-2 text-gray-600 hover:text-purple-600">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <button class="delete-btn p-2 text-gray-600 hover:text-red-600">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <div class="bg-gray-200 h-2 rounded-full">
+                                    <div class="bg-purple-600 h-2 rounded-full w-0 transition-all duration-200"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 录音控制 -->
+                <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+                    <div class="max-w-4xl mx-auto">
+                        <!-- 录音状态 -->
+                        <div id="recordingStatus" class="hidden mb-4">
+                            <div class="flex items-center justify-center space-x-2 text-purple-600">
+                                <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                <span class="recording-time">00:00</span>
+                            </div>
+                            <p class="text-center text-sm text-gray-500 mt-1">上滑取消录音</p>
+                        </div>
+
+                        <!-- 录音按钮 -->
+                        <div class="flex justify-center items-center space-x-4">
+                            <button id="recordButton" class="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-purple-700 transition-colors">
+                                <i class="fas fa-microphone text-2xl"></i>
+                            </button>
+                        </div>
+
+                        <!-- 完成按钮 -->
+                        <button onclick="completeRecording()" class="w-full bg-purple-600 text-white py-3 rounded-xl font-medium mt-4 disabled:opacity-50 disabled:cursor-not-allowed" disabled id="completeButton">
+                            完成录制
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </section>
+    </main>
+
+    <!-- 底部导航栏 -->
+    <nav class="fixed bottom-0 w-full bg-white border-t">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-around h-16">
+                <button onclick="showSection('chat')" class="nav-btn flex flex-col items-center justify-center text-gray-500 hover:text-primary" data-section="chat">
+                    <i class="fas fa-comments text-xl"></i>
+                    <span class="text-xs mt-1">倾诉</span>
+                </button>
+                <button onclick="showSection('self-love')" class="nav-btn flex flex-col items-center justify-center text-gray-500 hover:text-primary" data-section="self-love">
+                    <i class="fas fa-heart text-xl"></i>
+                    <span class="text-xs mt-1">爱自己</span>
+                </button>
+                <button onclick="showSection('create-avatar')" class="nav-btn flex flex-col items-center justify-center text-gray-500 hover:text-primary" data-section="create-avatar">
+                    <i class="fas fa-user-plus text-xl"></i>
+                    <span class="text-xs mt-1">创建数字人</span>
+                </button>
+                <button onclick="showSection('assessment')" class="nav-btn flex flex-col items-center justify-center text-gray-500 hover:text-primary" data-section="assessment">
+                    <i class="fas fa-clipboard-list text-xl"></i>
+                    <span class="text-xs mt-1">心理评测</span>
+                </button>
+                <button onclick="showSection('profile')" class="nav-btn flex flex-col items-center justify-center text-gray-500 hover:text-primary" data-section="profile">
+                    <i class="fas fa-user text-xl"></i>
+                    <span class="text-xs mt-1">我的</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <script>
+        function showSection(sectionId) {
+            // 隐藏所有section
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // 显示选中的section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // 更新导航按钮状态
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.dataset.section === sectionId) {
+                    btn.classList.remove('text-gray-500');
+                    btn.classList.add('text-primary');
+                } else {
+                    btn.classList.remove('text-primary');
+                    btn.classList.add('text-gray-500');
+                }
+            });
+        }
+
+        // 页面加载时显示登录页面
+        document.addEventListener('DOMContentLoaded', () => {
+            showSection('login');
+        });
+
+        // 验证码倒计时功能
+        document.getElementById('sendCodeBtn').addEventListener('click', function() {
+            const phoneInput = document.querySelector('input[type="tel"]');
+            const phoneNumber = phoneInput.value;
+            
+            // 验证手机号格式
+            if (!/^1[3-9]\d{9}$/.test(phoneNumber)) {
+                alert('请输入正确的手机号');
+                return;
+            }
+
+            // 禁用按钮并开始倒计时
+            this.disabled = true;
+            let countdown = 60;
+            
+            const timer = setInterval(() => {
+                this.textContent = `${countdown}秒后重试`;
+                countdown--;
+                
+                if (countdown < 0) {
+                    clearInterval(timer);
+                    this.disabled = false;
+                    this.textContent = '获取验证码';
+                }
+            }, 1000);
+
+            // 这里添加发送验证码的API调用
+            // sendVerificationCode(phoneNumber);
+        });
+
+        // 登录表单提交处理
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const phoneNumber = document.querySelector('input[type="tel"]').value;
+            const verificationCode = document.querySelector('input[type="text"]').value;
+            const privacyChecked = document.getElementById('privacy-checkbox').checked;
+
+            if (!privacyChecked) {
+                alert('请阅读并同意用户协议和隐私政策');
+                return;
+            }
+
+            // 这里添加登录API调用
+            // login(phoneNumber, verificationCode);
+            
+            // 登录成功后跳转到主页面
+            showSection('chat');
+        });
+
+        // 输入模式切换相关变量
+        let isVoiceMode = false;
+        let isRecording = false;
+        let recordingTimer = null;
+        let recordingStartTime = 0;
+
+        // 切换输入模式
+        function toggleInputMode() {
+            isVoiceMode = !isVoiceMode;
+            const switchBtn = document.getElementById('switchInputMode');
+            const textArea = document.getElementById('textInputArea');
+            const voiceArea = document.getElementById('voiceInputArea');
+            const recordingStatus = document.getElementById('voiceRecordingStatus');
+
+            if (isVoiceMode) {
+                switchBtn.innerHTML = '<i class="fas fa-keyboard text-xl"></i>';
+                textArea.classList.add('hidden');
+                voiceArea.classList.remove('hidden');
+            } else {
+                switchBtn.innerHTML = '<i class="fas fa-microphone text-xl"></i>';
+                textArea.classList.remove('hidden');
+                voiceArea.classList.add('hidden');
+                recordingStatus.classList.add('hidden');
+            }
+        }
+
+        // 初始化语音按钮事件
+        document.addEventListener('DOMContentLoaded', function() {
+            const voiceRecordBtn = document.getElementById('voiceRecordBtn');
+            const recordingStatus = document.getElementById('voiceRecordingStatus');
+            
+            if (voiceRecordBtn) {
+                // 开始录音
+                voiceRecordBtn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    startRecording();
+                });
+                
+                // 结束录音
+                voiceRecordBtn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    stopRecording();
+                });
+                
+                // 取消录音
+                voiceRecordBtn.addEventListener('touchmove', function(e) {
+                    const touch = e.touches[0];
+                    const btn = e.target.getBoundingClientRect();
+                    const moveY = touch.clientY - btn.top;
+                    
+                    if (moveY < -50) { // 上滑超过50px取消录音
+                        cancelRecording();
+                    }
+                });
+            }
+        });
+
+        // 开始录音
+        function startRecording() {
+            if (!isVoiceMode) return;
+            
+            isRecording = true;
+            recordingStartTime = Date.now();
+            document.getElementById('voiceRecordingStatus').classList.remove('hidden');
+            document.getElementById('voiceRecordBtn').textContent = '松开 结束';
+            
+            // 更新录音时间
+            recordingTimer = setInterval(updateRecordingTime, 1000);
+            
+            // 这里添加实际的录音开始逻辑
+            // navigator.mediaDevices.getUserMedia({ audio: true })...
+        }
+
+        // 停止录音
+        function stopRecording() {
+            if (!isRecording) return;
+            
+            isRecording = false;
+            clearInterval(recordingTimer);
+            document.getElementById('voiceRecordingStatus').classList.add('hidden');
+            document.getElementById('voiceRecordBtn').textContent = '按住 说话';
+            
+            // 这里添加实际的录音结束和发送逻辑
+            const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
+            if (duration >= 1) {
+                // 模拟发送语音消息
+                addMessage(`[语音消息] ${duration}秒`, true);
+            }
+        }
+
+        // 取消录音
+        function cancelRecording() {
+            if (!isRecording) return;
+            
+            isRecording = false;
+            clearInterval(recordingTimer);
+            document.getElementById('voiceRecordingStatus').classList.add('hidden');
+            document.getElementById('voiceRecordBtn').textContent = '按住 说话';
+            
+            // 提示用户录音已取消
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/75 text-white px-4 py-2 rounded-lg';
+            toast.textContent = '录音已取消';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 1500);
+        }
+
+        // 更新录音时间显示
+        function updateRecordingTime() {
+            if (!isRecording) return;
+            
+            const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const minutes = Math.floor(duration / 60);
+            const seconds = duration % 60;
+            document.getElementById('recordingTime').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // 发送消息函数更新
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+
+            // 添加用户消息
+            addMessage(message, true);
+            
+            // 清空输入框
+            messageInput.value = '';
+            
+            // 滚动到底部
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // 模拟AI回复
+            setTimeout(() => {
+                addMessage('我理解你的感受，请继续说下去...', false);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 1000);
+        }
+
+        // 添加消息到聊天界面
+        function addMessage(message, isUser) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex items-start space-x-3';
+            
+            if (isUser) {
+                messageDiv.innerHTML = `
+                    <div class="ml-auto bg-primary text-white rounded-lg p-3 max-w-[70%]">
+                        <p>${message}</p>
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330" class="w-8 h-8 rounded-full" alt="AI头像">
+                    <div class="bg-gray-100 rounded-lg p-3">
+                        <p class="text-gray-800">${message}</p>
+                    </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+        }
+
+        // 创建数字人表单提交处理
+        document.getElementById('createAvatarForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const relationship = document.getElementById('relationship').value;
+            const nickname = document.getElementById('nickname').value;
+            
+            if (!relationship || !nickname) {
+                alert('请填写完整信息');
+                return;
+            }
+            
+            // 这里添加创建数字人的API调用
+            // createDigitalAvatar(relationship, nickname);
+            
+            // 显示创建成功页面
+            showSection('create-success');
+        });
+
+        // 添加回车发送消息功能
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // PHQ-9测试表单提交处理
+        document.getElementById('phq9Form')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 计算得分
+            let score = 0;
+            const formData = new FormData(this);
+            formData.forEach(value => {
+                score += parseInt(value);
+            });
+            
+            // 显示结果
+            showTestResult('phq9', score);
+        });
+
+        // GAD-7测试表单提交处理
+        document.getElementById('gad7Form')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 计算得分
+            let score = 0;
+            const formData = new FormData(this);
+            formData.forEach(value => {
+                score += parseInt(value);
+            });
+            
+            // 显示结果
+            showTestResult('gad7', score);
+        });
+
+        // 显示测试结果
+        function showTestResult(testType, score) {
+            const resultIcon = document.getElementById('resultIcon');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultDescription = document.getElementById('resultDescription');
+            const resultScore = document.getElementById('resultScore');
+            const resultLevel = document.getElementById('resultLevel');
+            
+            // 设置分数
+            resultScore.textContent = score;
+            
+            // 根据测试类型和分数设置不同的结果
+            if (testType === 'phq9') {
+                resultTitle.textContent = 'PHQ-9 抑郁测试结果';
+                if (score <= 4) {
+                    resultIcon.innerHTML = '<i class="fas fa-smile text-4xl text-green-500"></i>';
+                    resultIcon.className = 'w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center bg-green-100';
+                    resultLevel.textContent = '无抑郁症状';
+                    resultDescription.textContent = '您目前的心理状态良好，请继续保持积极乐观的生活态度。';
+                } else if (score <= 9) {
+                    resultIcon.innerHTML = '<i class="fas fa-meh text-4xl text-yellow-500"></i>';
+                    resultIcon.className = 'w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center bg-yellow-100';
+                    resultLevel.textContent = '轻度抑郁';
+                    resultDescription.textContent = '您可能存在轻微的抑郁症状，建议适当关注自己的心理健康。';
+                } else {
+                    resultIcon.innerHTML = '<i class="fas fa-frown text-4xl text-red-500"></i>';
+                    resultIcon.className = 'w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center bg-red-100';
+                    resultLevel.textContent = '中度或重度抑郁';
+                    resultDescription.textContent = '建议您及时寻求专业的心理咨询帮助。';
+                }
+            } else {
+                resultTitle.textContent = 'GAD-7 焦虑测试结果';
+                if (score <= 4) {
+                    resultIcon.innerHTML = '<i class="fas fa-smile text-4xl text-green-500"></i>';
+                    resultIcon.className = 'w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center bg-green-100';
+                    resultLevel.textContent = '无焦虑症状';
+                    resultDescription.textContent = '您目前的心理状态良好，请继续保持平和的心态。';
+                } else if (score <= 9) {
+                    resultIcon.innerHTML = '<i class="fas fa-meh text-4xl text-yellow-500"></i>';
+                    resultIcon.className = 'w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center bg-yellow-100';
+                    resultLevel.textContent = '轻度焦虑';
+                    resultDescription.textContent = '您可能存在轻微的焦虑症状，建议适当放松心情。';
+                } else {
+                    resultIcon.innerHTML = '<i class="fas fa-frown text-4xl text-red-500"></i>';
+                    resultIcon.className = 'w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center bg-red-100';
+                    resultLevel.textContent = '中度或重度焦虑';
+                    resultDescription.textContent = '建议您及时寻求专业的心理咨询帮助。';
+                }
+            }
+            
+            // 显示结果页面
+            showSection('test-result');
+        }
+
+        // 页面加载时初始化所有按钮事件
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化表单提交事件
+            const feedbackForm = document.getElementById('feedbackForm');
+            if (feedbackForm) {
+                feedbackForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    // 清空表单
+                    this.reset();
+                    // 跳转到成功页面
+                    showSection('feedback-success');
+                });
+            }
+
+            // 初始化支付确认按钮事件
+            const confirmPaymentBtn = document.querySelector('#payment button:last-child');
+            if (confirmPaymentBtn) {
+                confirmPaymentBtn.addEventListener('click', function() {
+                    alert('支付成功！');
+                    showSection('profile');
+                });
+            }
+
+            // 初始化图片上传区域点击事件
+            const imageUploadArea = document.querySelector('#feedback .aspect-square');
+            if (imageUploadArea) {
+                imageUploadArea.addEventListener('click', function() {
+                    // 创建一个隐藏的文件输入框
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = 'image/*';
+                    fileInput.multiple = true;
+                    fileInput.style.display = 'none';
+                    
+                    fileInput.addEventListener('change', function(e) {
+                        // 处理选择的文件
+                        const files = e.target.files;
+                        if (files.length > 3) {
+                            alert('最多只能上传3张图片');
+                            return;
+                        }
+                        // 这里可以添加预览图片的逻辑
+                    });
+                    
+                    fileInput.click();
+                });
+            }
+        });
+
+        let cropper = null;
+        let selectedAvatarUrl = null;
+
+        // 处理头像文件选择
+        function handleAvatarSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 验证文件类型
+            if (!file.type.startsWith('image/')) {
+                alert('请选择图片文件');
+                return;
+            }
+
+            // 验证文件大小（最大 5MB）
+            if (file.size > 5 * 1024 * 1024) {
+                alert('图片大小不能超过 5MB');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                initCropper(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 初始化裁剪器
+        function initCropper(imageUrl) {
+            const cropperImage = document.getElementById('cropperImage');
+            const cropperContainer = document.getElementById('cropperContainer');
+
+            // 显示裁剪区域
+            cropperContainer.classList.remove('hidden');
+            cropperImage.src = imageUrl;
+
+            // 销毁现有的裁剪器
+            if (cropper) {
+                cropper.destroy();
+            }
+
+            // 初始化新的裁剪器
+            cropper = new Cropper(cropperImage, {
+                aspectRatio: 1,
+                viewMode: 1,
+                dragMode: 'move',
+                autoCropArea: 1,
+                cropBoxMovable: false,
+                cropBoxResizable: false,
+                guides: false,
+                highlight: false,
+                background: false
+            });
+        }
+
+        // 选择预设头像
+        function selectPresetAvatar(imageUrl) {
+            selectedAvatarUrl = imageUrl;
+            updateAvatarPreview(imageUrl);
+            showSection('create-avatar');
+        }
+
+        // 取消裁剪
+        function cancelCrop() {
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            document.getElementById('cropperContainer').classList.add('hidden');
+            document.getElementById('avatarInput').value = '';
+        }
+
+        // 确认裁剪
+        function confirmCrop() {
+            if (!cropper) return;
+
+            // 获取裁剪后的图片数据
+            const croppedCanvas = cropper.getCroppedCanvas({
+                width: 200,
+                height: 200
+            });
+
+            // 转换为base64
+            selectedAvatarUrl = croppedCanvas.toDataURL('image/jpeg');
+            
+            // 更新预览
+            updateAvatarPreview(selectedAvatarUrl);
+            
+            // 清理裁剪器
+            cancelCrop();
+            
+            // 返回创建页面
+            showSection('create-avatar');
+        }
+
+        // 更新头像预览
+        function updateAvatarPreview(imageUrl) {
+            const preview = document.getElementById('avatarPreview');
+            preview.src = imageUrl;
+        }
+
+        // 拖拽上传支持
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropZone = document.querySelector('#avatar-select .relative');
+            
+            if (dropZone) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                });
+
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, highlight, false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, unhighlight, false);
+                });
+
+                function highlight(e) {
+                    dropZone.classList.add('border-primary');
+                }
+
+                function unhighlight(e) {
+                    dropZone.classList.remove('border-primary');
+                }
+
+                dropZone.addEventListener('drop', handleDrop, false);
+
+                function handleDrop(e) {
+                    const dt = e.dataTransfer;
+                    const file = dt.files[0];
+                    
+                    const input = document.getElementById('avatarInput');
+                    input.files = dt.files;
+                    input.dispatchEvent(new Event('change'));
+                }
+            }
+        });
+
+        // 通话相关变量
+        let isInCall = false;
+        let isCallMinimized = false;
+        let callTimer = null;
+        let callDuration = 0;
+        let isMuted = false;
+        let isSpeakerOn = true;
+
+        // 开始通话
+        function startCall() {
+            isInCall = true;
+            document.getElementById('voice-call').classList.remove('hidden');
+            document.getElementById('chat').classList.add('hidden');
+            
+            // 模拟接通延迟
+            setTimeout(() => {
+                document.getElementById('callStatus').textContent = '通话中';
+                document.getElementById('callTimer').classList.remove('opacity-0');
+                startCallTimer();
+            }, 2000);
+        }
+
+        // 结束通话
+        function endCall() {
+            if (!isInCall) return;
+            
+            isInCall = false;
+            stopCallTimer();
+            
+            // 添加淡出动画
+            const voiceCallSection = document.getElementById('voice-call');
+            voiceCallSection.classList.add('opacity-0');
+            
+            // 等待动画完成后隐藏通话界面并显示聊天界面
+            setTimeout(() => {
+                voiceCallSection.classList.add('hidden');
+                document.getElementById('minimized-call').classList.add('hidden');
+                
+                // 显示AI倾听者页面
+                const chatSection = document.getElementById('chat');
+                chatSection.classList.remove('hidden');
+                chatSection.style.opacity = '0';
+                
+                // 添加淡入动画
+                requestAnimationFrame(() => {
+                    chatSection.style.transition = 'opacity 0.3s ease-in-out';
+                    chatSection.style.opacity = '1';
+                });
+            }, 300);
+            
+            // 重置所有状态
+            callDuration = 0;
+            isMuted = false;
+            isSpeakerOn = true;
+            isCallMinimized = false;
+            document.getElementById('callTimer').classList.add('opacity-0');
+            updateCallControls();
+            
+            // 添加通话结束提示
+            showToast('通话已结束');
+        }
+
+        // 最小化通话
+        function minimizeCall() {
+            isCallMinimized = true;
+            document.getElementById('voice-call').classList.add('opacity-0');
+            setTimeout(() => {
+                document.getElementById('voice-call').classList.add('hidden');
+                document.getElementById('minimized-call').classList.remove('hidden');
+            }, 300);
+        }
+
+        // 最大化通话
+        function maximizeCall() {
+            isCallMinimized = false;
+            document.getElementById('voice-call').classList.remove('hidden');
+            document.getElementById('minimized-call').classList.add('hidden');
+            setTimeout(() => {
+                document.getElementById('voice-call').classList.remove('opacity-0');
+            }, 50);
+        }
+
+        // 开始计时
+        function startCallTimer() {
+            callTimer = setInterval(() => {
+                callDuration++;
+                updateCallDuration();
+            }, 1000);
+        }
+
+        // 停止计时
+        function stopCallTimer() {
+            if (callTimer) {
+                clearInterval(callTimer);
+                callTimer = null;
+            }
+        }
+
+        // 更新通话时长显示
+        function updateCallDuration() {
+            const minutes = Math.floor(callDuration / 60);
+            const seconds = callDuration % 60;
+            const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            document.getElementById('callTimer').textContent = timeString;
+            document.getElementById('minimized-timer').textContent = timeString;
+        }
+
+        // 切换麦克风
+        function toggleMute() {
+            isMuted = !isMuted;
+            updateCallControls();
+        }
+
+        // 切换扬声器
+        function toggleSpeaker() {
+            isSpeakerOn = !isSpeakerOn;
+            updateCallControls();
+        }
+
+        // 更新通话控制按钮状态
+        function updateCallControls() {
+            const muteIcon = document.getElementById('muteIcon');
+            const speakerIcon = document.getElementById('speakerIcon');
+            
+            muteIcon.className = isMuted ? 'fas fa-microphone-slash text-2xl' : 'fas fa-microphone text-2xl';
+            speakerIcon.className = isSpeakerOn ? 'fas fa-volume-up text-2xl' : 'fas fa-volume-mute text-2xl';
+            
+            if (isMuted) {
+                muteIcon.parentElement.classList.add('bg-purple-500');
+            } else {
+                muteIcon.parentElement.classList.remove('bg-purple-500');
+            }
+            
+            if (!isSpeakerOn) {
+                speakerIcon.parentElement.classList.add('bg-purple-500');
+            } else {
+                speakerIcon.parentElement.classList.remove('bg-purple-500');
+            }
+        }
+
+        // 录音相关变量
+        let mediaRecorder;
+        let audioChunks = [];
+        let recordings = [];
+        let isRecording = false;
+        let recordingStartTime;
+        let recordingTimer;
+
+        // 初始化录音功能
+        async function initializeRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    addRecordingToList(audioUrl);
+                    audioChunks = [];
+                };
+                
+                setupRecordingButton();
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                alert('无法访问麦克风，请确保已授予权限。');
+            }
+        }
+
+        // 设置录音按钮事件
+        function setupRecordingButton() {
+            const recordButton = document.getElementById('recordButton');
+            const recordingStatus = document.getElementById('recordingStatus');
+            
+            recordButton.addEventListener('mousedown', startRecording);
+            recordButton.addEventListener('mouseup', stopRecording);
+            recordButton.addEventListener('mouseleave', stopRecording);
+            
+            // 触摸设备支持
+            recordButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                startRecording();
+            });
+            
+            recordButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                stopRecording();
+            });
+        }
+
+        // 开始录音
+        function startRecording() {
+            if (isRecording) return;
+            
+            isRecording = true;
+            audioChunks = [];
+            mediaRecorder.start();
+            recordingStartTime = Date.now();
+            
+            // 显示录音状态
+            document.getElementById('recordingStatus').classList.remove('hidden');
+            
+            // 更新录音时间
+            updateRecordingTime();
+            recordingTimer = setInterval(updateRecordingTime, 1000);
+        }
+
+        // 停止录音
+        function stopRecording() {
+            if (!isRecording) return;
+            
+            isRecording = false;
+            mediaRecorder.stop();
+            clearInterval(recordingTimer);
+            
+            // 隐藏录音状态
+            document.getElementById('recordingStatus').classList.add('hidden');
+        }
+
+        // 更新录音时间显示
+        function updateRecordingTime() {
+            const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const minutes = Math.floor(duration / 60);
+            const seconds = duration % 60;
+            document.querySelector('.recording-time').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // 添加录音到列表
+        function addRecordingToList(audioUrl) {
+            const template = document.getElementById('recordingTemplate');
+            const recordingsList = document.getElementById('recordingsList');
+            const newRecording = template.cloneNode(true);
+            
+            newRecording.classList.remove('hidden');
+            newRecording.id = `recording-${recordings.length + 1}`;
+            
+            // 更新录音编号
+            newRecording.querySelector('.recording-number').textContent = recordings.length + 1;
+            
+            // 设置播放按钮事件
+            const playBtn = newRecording.querySelector('.play-btn');
+            const audio = new Audio(audioUrl);
+            playBtn.addEventListener('click', () => {
+                if (audio.paused) {
+                    audio.play();
+                    playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                } else {
+                    audio.pause();
+                    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+            });
+            
+            // 设置删除按钮事件
+            const deleteBtn = newRecording.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', () => {
+                newRecording.remove();
+                recordings = recordings.filter(r => r.id !== newRecording.id);
+                updateCompleteButton();
+            });
+            
+            // 添加到录音列表
+            recordingsList.appendChild(newRecording);
+            recordings.push({
+                id: newRecording.id,
+                url: audioUrl,
+                element: newRecording
+            });
+            
+            updateCompleteButton();
+        }
+
+        // 更新完成按钮状态
+        function updateCompleteButton() {
+            const completeButton = document.getElementById('completeButton');
+            completeButton.disabled = recordings.length === 0;
+        }
+
+        // 完成录音
+        function completeRecording() {
+            if (recordings.length === 0) return;
+            
+            // 这里可以处理录音文件，例如上传到服务器
+            // 暂时只返回到创建数字人页面
+            showSection('create-avatar');
+        }
+
+        // 在页面加载时初始化录音功能
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... existing code ...
+            
+            // 录音按钮点击事件
+            const recordVoiceBtn = document.querySelector('[onclick="showSection(\'voice-record\')"]');
+            if (recordVoiceBtn) {
+                recordVoiceBtn.addEventListener('click', () => {
+                    showSection('voice-record');
+                    initializeRecording();
+                });
+            }
+        });
+
+        // 添加提示消息函数
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/75 text-white px-4 py-2 rounded-lg z-50 transition-opacity duration-300';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // 淡入效果
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                setTimeout(() => {
+                    // 淡出效果
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 300);
+                }, 1500);
+            });
+        }
+    </script>
+</body>
+</html>
+
